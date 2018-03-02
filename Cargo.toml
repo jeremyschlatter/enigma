@@ -1,0 +1,6 @@
+[package]
+name = "enigma"
+version = "0.1.0"
+authors = ["Jeremy Schlatter <jeremy.schlatter@gmail.com>"]
+
+[dependencies]
