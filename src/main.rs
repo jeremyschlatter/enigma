@@ -1,7 +1,7 @@
 const ALPHABET_SIZE: usize = 26;
 type Permutation = [usize; ALPHABET_SIZE];
 
-const PERMUTATIONS: [Permutation; 2] = [
+const PERMUTATIONS: [Permutation; 4] = [
     [
         0, 21, 4, 7, 15, 18, 12, 14, 16, 8, 3, 19, 24, 23, 2, 11, 13, 5, 22, 20, 6, 25, 10, 17, 9,
         1,
@@ -10,11 +10,19 @@ const PERMUTATIONS: [Permutation; 2] = [
         5, 22, 8, 24, 14, 16, 7, 11, 10, 18, 6, 15, 9, 25, 0, 2, 13, 3, 23, 21, 12, 20, 4, 17, 19,
         1,
     ],
+    [
+        25, 4, 6, 20, 13, 21, 14, 12, 22, 11, 0, 17, 9, 16, 10, 15, 5, 19, 8, 1, 7, 3, 2, 24, 23,
+        18,
+    ],
+    [
+        2, 17, 9, 1, 21, 12, 15, 11, 20, 3, 24, 14, 4, 10, 16, 22, 23, 5, 19, 7, 25, 6, 18, 13, 0,
+        8,
+    ],
 ];
 
 #[derive(Debug)]
 struct Enigma {
-    rotor: Rotor,
+    rotors: [Rotor; 3],
     reflector: Reflector,
 }
 
@@ -29,8 +37,12 @@ fn c2u(c: char) -> usize {
 impl Enigma {
     fn default() -> Enigma {
         Enigma {
-            rotor: Rotor::from(PERMUTATIONS[0]),
-            reflector: Reflector::from(PERMUTATIONS[1]),
+            rotors: [
+                Rotor::from(PERMUTATIONS[0]),
+                Rotor::from(PERMUTATIONS[1]),
+                Rotor::from(PERMUTATIONS[2]),
+            ],
+            reflector: Reflector::from(PERMUTATIONS[3]),
         }
     }
     fn cipher(&mut self, s: &str) -> String {
@@ -43,10 +55,14 @@ impl Enigma {
 
     fn cipher_one(&mut self, c: char) -> char {
         let mut u = c2u(c);
-        u = self.rotor.forward(u);
+        for rotor in self.rotors.iter() {
+            u = rotor.forward(u);
+        }
         u = self.reflector.reflect(u);
-        u = self.rotor.backward(u);
-        self.rotor.offset = (self.rotor.offset + 1) % ALPHABET_SIZE;
+        for rotor in self.rotors.iter().rev() {
+            u = rotor.backward(u);
+        }
+        self.rotors[0].offset = (self.rotors[0].offset + 1) % ALPHABET_SIZE;
         u2c(u)
     }
 }
