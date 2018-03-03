@@ -1,5 +1,5 @@
 const ALPHABET_SIZE: usize = 26;
-type Permutation = [u8; ALPHABET_SIZE];
+type Permutation = [usize; ALPHABET_SIZE];
 
 const PERMUTATIONS: [Permutation; 2] = [
     [
@@ -18,12 +18,12 @@ struct Enigma {
     reflector: Reflector,
 }
 
-fn u2c(u: u8) -> char {
-    (u + ('a' as u8)) as char
+fn u2c(u: usize) -> char {
+    (u + ('a' as u8 as usize)) as u8 as char
 }
 
-fn c2u(c: char) -> u8 {
-    c as u8 - 'a' as u8
+fn c2u(c: char) -> usize {
+    c as usize - 'a' as usize
 }
 
 impl Enigma {
@@ -59,14 +59,14 @@ impl Reflector {
     fn from(p: Permutation) -> Reflector {
         let mut r = p.clone();
         for (a, b) in p.iter().zip(p.iter().rev()) {
-            r[*a as usize] = *b;
-            r[*b as usize] = *a;
+            r[*a] = *b;
+            r[*b] = *a;
         }
         println!("{:?}", r);
         Reflector { wiring: r }
     }
-    fn reflect(&self, i: u8) -> u8 {
-        self.wiring[i as usize]
+    fn reflect(&self, i: usize) -> usize {
+        self.wiring[i]
     }
 }
 
@@ -74,7 +74,7 @@ impl Reflector {
 struct Rotor {
     forward_: Permutation,
     backward_: Permutation,
-    offset: u8,
+    offset: usize,
 }
 
 impl Rotor {
@@ -85,15 +85,15 @@ impl Rotor {
             offset: 0,
         };
         for i in 0..ALPHABET_SIZE {
-            r.backward_[r.forward_[i] as usize] = i as u8;
+            r.backward_[r.forward_[i]] = i;
         }
         r
     }
-    fn forward(&self, i: u8) -> u8 {
-        self.forward_[i as usize]
+    fn forward(&self, i: usize) -> usize {
+        self.forward_[i]
     }
-    fn backward(&self, i: u8) -> u8 {
-        self.backward_[i as usize]
+    fn backward(&self, i: usize) -> usize {
+        self.backward_[i]
     }
 }
 
