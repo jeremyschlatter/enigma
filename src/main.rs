@@ -1,4 +1,16 @@
-mod rotors;
+const ALPHABET_SIZE: usize = 26;
+type Permutation = [u8; ALPHABET_SIZE];
+
+const PERMUTATIONS: [Permutation; 2] = [
+    [
+        0, 21, 4, 7, 15, 18, 12, 14, 16, 8, 3, 19, 24, 23, 2, 11, 13, 5, 22, 20, 6, 25, 10, 17, 9,
+        1,
+    ],
+    [
+        5, 22, 8, 24, 14, 16, 7, 11, 10, 18, 6, 15, 9, 25, 0, 2, 13, 3, 23, 21, 12, 20, 4, 17, 19,
+        1,
+    ],
+];
 
 #[derive(Debug)]
 struct Enigma {
@@ -15,12 +27,10 @@ fn c2u(c: char) -> u8 {
 }
 
 impl Enigma {
-    fn from(rotor_set: [[u8; 26]; 2]) -> Enigma {
+    fn default() -> Enigma {
         Enigma {
-            rotor: Rotor::from(rotor_set[0]),
-            reflector: Reflector {
-                wiring: rotor_set[1],
-            },
+            rotor: Rotor::from(PERMUTATIONS[0]),
+            reflector: Reflector::from(PERMUTATIONS[1]),
         }
     }
     fn cipher(&self, s: &str) -> String {
@@ -42,11 +52,19 @@ impl Enigma {
 
 #[derive(Debug)]
 struct Reflector {
-    // TODO: Do the folding in a constructor instead of in Python.
-    wiring: [u8; 26],
+    wiring: Permutation,
 }
 
 impl Reflector {
+    fn from(p: Permutation) -> Reflector {
+        let mut r = p.clone();
+        for (a, b) in p.iter().zip(p.iter().rev()) {
+            r[*a as usize] = *b;
+            r[*b as usize] = *a;
+        }
+        println!("{:?}", r);
+        Reflector { wiring: r }
+    }
     fn reflect(&self, i: u8) -> u8 {
         self.wiring[i as usize]
     }
@@ -54,19 +72,19 @@ impl Reflector {
 
 #[derive(Debug)]
 struct Rotor {
-    forward_: [u8; 26],
-    backward_: [u8; 26],
+    forward_: Permutation,
+    backward_: Permutation,
     offset: u8,
 }
 
 impl Rotor {
-    fn from(arr: [u8; 26]) -> Rotor {
+    fn from(p: Permutation) -> Rotor {
         let mut r = Rotor {
-            forward_: arr,
-            backward_: arr,
+            forward_: p,
+            backward_: p,
             offset: 0,
         };
-        for i in 0..26 {
+        for i in 0..ALPHABET_SIZE {
             r.backward_[r.forward_[i] as usize] = i as u8;
         }
         r
@@ -80,7 +98,7 @@ impl Rotor {
 }
 
 fn main() {
-    let enigma = Enigma::from(rotors::rotors());
+    let enigma = Enigma::default();
 
     println!("{:?}", enigma.cipher("svoolcpbov"));
     println!("{:?}", enigma.cipher("helloxkyle"));
@@ -89,6 +107,6 @@ fn main() {
 #[test]
 fn it_is_symmetric() {
     let plaintext = "helloxkyle";
-    let enigma = Enigma::from(rotors::rotors());
+    let enigma = Enigma::default();
     assert_eq!(enigma.cipher(&enigma.cipher(plaintext)), plaintext);
 }
