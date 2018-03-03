@@ -33,7 +33,7 @@ impl Enigma {
             reflector: Reflector::from(PERMUTATIONS[1]),
         }
     }
-    fn cipher(&self, s: &str) -> String {
+    fn cipher(&mut self, s: &str) -> String {
         let mut result = String::with_capacity(s.len());
         for c in s.chars() {
             result.push(self.cipher_one(c))
@@ -41,11 +41,12 @@ impl Enigma {
         result
     }
 
-    fn cipher_one(&self, c: char) -> char {
+    fn cipher_one(&mut self, c: char) -> char {
         let mut u = c2u(c);
         u = self.rotor.forward(u);
         u = self.reflector.reflect(u);
         u = self.rotor.backward(u);
+        self.rotor.offset = (self.rotor.offset + 1) % ALPHABET_SIZE;
         u2c(u)
     }
 }
@@ -62,7 +63,7 @@ impl Reflector {
             r[*a] = *b;
             r[*b] = *a;
         }
-        println!("{:?}", r);
+
         Reflector { wiring: r }
     }
     fn reflect(&self, i: usize) -> usize {
@@ -72,33 +73,35 @@ impl Reflector {
 
 #[derive(Debug)]
 struct Rotor {
-    forward_: Permutation,
-    backward_: Permutation,
+    wiring: Permutation,
+    wiring_backward: Permutation,
     offset: usize,
 }
 
 impl Rotor {
     fn from(p: Permutation) -> Rotor {
         let mut r = Rotor {
-            forward_: p,
-            backward_: p,
+            wiring: p,
+            wiring_backward: p,
             offset: 0,
         };
         for i in 0..ALPHABET_SIZE {
-            r.backward_[r.forward_[i]] = i;
+            r.wiring[i] = (ALPHABET_SIZE + p[i] - i) % ALPHABET_SIZE;
+            r.wiring_backward[p[i]] = (ALPHABET_SIZE + i - p[i]) % ALPHABET_SIZE;
         }
         r
     }
+
     fn forward(&self, i: usize) -> usize {
-        self.forward_[i]
+        (i + self.wiring[(i + self.offset) % ALPHABET_SIZE]) % ALPHABET_SIZE
     }
     fn backward(&self, i: usize) -> usize {
-        self.backward_[i]
+        (i + self.wiring_backward[(i + self.offset) % ALPHABET_SIZE]) % ALPHABET_SIZE
     }
 }
 
 fn main() {
-    let enigma = Enigma::default();
+    let mut enigma = Enigma::default();
 
     println!("{:?}", enigma.cipher("svoolcpbov"));
     println!("{:?}", enigma.cipher("helloxkyle"));
@@ -107,6 +110,13 @@ fn main() {
 #[test]
 fn it_is_symmetric() {
     let plaintext = "helloxkyle";
-    let enigma = Enigma::default();
-    assert_eq!(enigma.cipher(&enigma.cipher(plaintext)), plaintext);
+    let ciphertext = Enigma::default().cipher(plaintext);
+
+    assert_eq!(Enigma::default().cipher(&ciphertext), plaintext);
+}
+
+#[test]
+fn it_steps() {
+    let mut enigma = Enigma::default();
+    assert_ne!(enigma.cipher("a"), enigma.cipher("a"));
 }
