@@ -1,7 +1,7 @@
 const ALPHABET_SIZE: usize = 26;
 type Permutation = [usize; ALPHABET_SIZE];
 
-const PERMUTATIONS: [Permutation; 4] = [
+const PERMUTATIONS: [Permutation; 5] = [
     [
         0, 21, 4, 7, 15, 18, 12, 14, 16, 8, 3, 19, 24, 23, 2, 11, 13, 5, 22, 20, 6, 25, 10, 17, 9,
         1,
@@ -18,12 +18,17 @@ const PERMUTATIONS: [Permutation; 4] = [
         2, 17, 9, 1, 21, 12, 15, 11, 20, 3, 24, 14, 4, 10, 16, 22, 23, 5, 19, 7, 25, 6, 18, 13, 0,
         8,
     ],
+    [
+        2, 17, 9, 1, 21, 12, 15, 11, 20, 3, 24, 14, 4, 10, 16, 22, 23, 5, 19, 7, 25, 6, 18, 13, 0,
+        8,
+    ],
 ];
 
 #[derive(Debug)]
 struct Enigma {
     rotors: [Rotor; 3],
     reflector: Reflector,
+    plugboard: Permutation,
 }
 
 fn u2c(u: usize) -> char {
@@ -32,6 +37,19 @@ fn u2c(u: usize) -> char {
 
 fn c2u(c: char) -> usize {
     c as usize - 'a' as usize
+}
+
+fn make_plugboard(p: Permutation, n: u32) -> Permutation {
+    let mut r = [0; ALPHABET_SIZE];
+    for i in 0..r.len() {
+        r[i] = i;
+    }
+    for i in 0..(n as usize) {
+        let (a, b) = (p[i * 2], p[i * 2 + 1]);
+        r[a] = b;
+        r[b] = a;
+    }
+    r
 }
 
 impl Enigma {
@@ -43,6 +61,7 @@ impl Enigma {
                 Rotor::from(PERMUTATIONS[2], 10),
             ],
             reflector: Reflector::from(PERMUTATIONS[3]),
+            plugboard: make_plugboard(PERMUTATIONS[4], 10),
         }
     }
     fn cipher(&mut self, s: &str) -> String {
@@ -55,6 +74,7 @@ impl Enigma {
 
     fn cipher_one(&mut self, c: char) -> char {
         let mut u = c2u(c);
+        u = self.plugboard[u];
         for rotor in self.rotors.iter() {
             u = rotor.forward(u);
         }
@@ -62,14 +82,18 @@ impl Enigma {
         for rotor in self.rotors.iter().rev() {
             u = rotor.backward(u);
         }
+        u = self.plugboard[u];
+
+        // Step the rotors.
         for i in 0..self.rotors.len() {
             if i == 0 || self.rotors[i - 1].notch == self.rotors[i - 1].offset
-                // double-stepping:
+                // Double-stepping:
                 || (i < self.rotors.len() && self.rotors[i].notch == self.rotors[i].offset)
             {
                 self.rotors[i].offset = (self.rotors[i].offset + 1) % ALPHABET_SIZE;
             }
         }
+
         u2c(u)
     }
 }
@@ -82,9 +106,11 @@ struct Reflector {
 impl Reflector {
     fn from(p: Permutation) -> Reflector {
         let mut r = p.clone();
-        for (a, b) in p.iter().zip(p.iter().rev()) {
-            r[*a] = *b;
-            r[*b] = *a;
+
+        for i in 0..ALPHABET_SIZE / 2 {
+            let (a, b) = (p[i * 2], p[i * 2 + 1]);
+            r[a] = b;
+            r[b] = a;
         }
 
         Reflector { wiring: r }
@@ -143,7 +169,7 @@ fn it_is_symmetric() {
 #[test]
 fn it_steps() {
     let mut enigma = Enigma::default();
-    assert_ne!(enigma.cipher("a"), enigma.cipher("a"));
+    assert_ne!(enigma.cipher("testing"), enigma.cipher("testing"));
 }
 
 #[test]
