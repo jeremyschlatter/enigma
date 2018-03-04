@@ -38,9 +38,9 @@ impl Enigma {
     fn default() -> Enigma {
         Enigma {
             rotors: [
-                Rotor::from(PERMUTATIONS[0]),
-                Rotor::from(PERMUTATIONS[1]),
-                Rotor::from(PERMUTATIONS[2]),
+                Rotor::from(PERMUTATIONS[0], 3),
+                Rotor::from(PERMUTATIONS[1], 5),
+                Rotor::from(PERMUTATIONS[2], 10),
             ],
             reflector: Reflector::from(PERMUTATIONS[3]),
         }
@@ -62,7 +62,14 @@ impl Enigma {
         for rotor in self.rotors.iter().rev() {
             u = rotor.backward(u);
         }
-        self.rotors[0].offset = (self.rotors[0].offset + 1) % ALPHABET_SIZE;
+        for i in 0..self.rotors.len() {
+            if i == 0 || self.rotors[i - 1].notch == self.rotors[i - 1].offset
+                // double-stepping:
+                || (i < self.rotors.len() && self.rotors[i].notch == self.rotors[i].offset)
+            {
+                self.rotors[i].offset = (self.rotors[i].offset + 1) % ALPHABET_SIZE;
+            }
+        }
         u2c(u)
     }
 }
@@ -92,14 +99,16 @@ struct Rotor {
     wiring: Permutation,
     wiring_backward: Permutation,
     offset: usize,
+    notch: usize,
 }
 
 impl Rotor {
-    fn from(p: Permutation) -> Rotor {
+    fn from(p: Permutation, notch: usize) -> Rotor {
         let mut r = Rotor {
             wiring: p,
             wiring_backward: p,
             offset: 0,
+            notch: notch,
         };
         for i in 0..ALPHABET_SIZE {
             r.wiring[i] = (ALPHABET_SIZE + p[i] - i) % ALPHABET_SIZE;
@@ -135,4 +144,20 @@ fn it_is_symmetric() {
 fn it_steps() {
     let mut enigma = Enigma::default();
     assert_ne!(enigma.cipher("a"), enigma.cipher("a"));
+}
+
+#[test]
+fn it_steps_all_rotors() {
+    let mut enigma = Enigma::default();
+    for _ in 0..(ALPHABET_SIZE.pow(2) + ALPHABET_SIZE + 4) {
+        enigma.cipher("a");
+    }
+    assert_eq!(
+        (1, 3, 4),
+        (
+            enigma.rotors[2].offset,
+            enigma.rotors[1].offset,
+            enigma.rotors[0].offset
+        )
+    );
 }
